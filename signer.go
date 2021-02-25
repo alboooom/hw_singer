@@ -11,6 +11,7 @@ func SingleHash(in, out chan interface{}) {
 	mu := &sync.Mutex{}
 	wg := &sync.WaitGroup{}
 	wg2 := &sync.WaitGroup{}
+	mu4 := &sync.Mutex{}
 
 	for val := range in {
 		wg.Add(1)
@@ -30,10 +31,14 @@ func SingleHash(in, out chan interface{}) {
 			defer wg2.Done()
 			wg3 := &sync.WaitGroup{}
 			for value := range inChan {
+				mu4.Lock()
+				val:= value
+				mu4.Unlock()
 				wg3.Add(1)
 				go func() {
+					outS <- DataSignerCrc32(val)
 					wg3.Done()
-					outS <- DataSignerCrc32(value)
+
 				}()
 			}
 			wg3.Wait()
@@ -77,7 +82,6 @@ func multihashWorker(out chan interface{}, inVal interface{}, mu *sync.Mutex, wg
 			numChan <- number
 		}(inVal, i, workCh)
 	}
-	// mu2.Unlock()
 	for valS := range workCh {
 		mu.Lock()
 		mapResult[valS] = workResult[valS]
@@ -96,7 +100,6 @@ func CombineResults(in, out chan interface{}) {
 	var result []string
 	var result2 string
 
-	// LOOP:
 	for val := range in {
 		sValue := fmt.Sprintf("%v", val)
 		result = append(result, sValue)
